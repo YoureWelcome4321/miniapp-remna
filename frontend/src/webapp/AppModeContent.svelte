@@ -217,6 +217,7 @@
   );
   const serverStatusUrl = $derived(accountView.serverStatusUrl);
   const supportUrl = $derived(accountView.supportUrl);
+  const requiredChannelUrl = $derived(String(cfg.requiredChannelUrl || ""));
   const telegramNotificationsNeedPrompt = $derived(accountView.telegramNotificationsNeedPrompt);
   const telegramNotificationsStartLink = $derived(accountView.telegramNotificationsStartLink);
   const telegramNotificationsStatus = $derived(accountView.telegramNotificationsStatus);
@@ -315,6 +316,7 @@
   const goHome = $derived(appActions.goHome);
   const goInstall = $derived(appActions.goInstall);
   const goInvite = $derived(appActions.goInvite);
+  const goSubscription = $derived(appActions.goSubscription);
   const goPartner = $derived(appActions.goPartner);
   const goSettings = $derived(appActions.goSettings);
   const goNotifications = $derived(appActions.goNotifications);
@@ -350,6 +352,7 @@
   const openInstallOrConnect = $derived(appActions.openInstallOrConnect);
   const openLoginTelegram = $derived(appActions.openLoginTelegram);
   const openPaymentModal = $derived(appActions.openPaymentModal);
+  const openCustomizedPayment = $derived(appActions.openCustomizedPayment);
   const openPremiumTopupModal = $derived(appActions.openPremiumTopupModal);
   const openPublicConnectLink = $derived(appActions.openPublicConnectLink);
   const openRegularTopupModal = $derived(appActions.openRegularTopupModal);
@@ -589,6 +592,7 @@
       {activateTrial}
       {activeTab}
       {appSettings}
+      {plans}
       {balance}
       {applyPromo}
       {autoRenewBusy}
@@ -623,6 +627,7 @@
       {goHome}
       {goInstall}
       {goInvite}
+      {goSubscription}
       {goPartner}
       {partnerEnabled}
       {goSettings}
@@ -653,6 +658,7 @@
       {openInstallOrConnect}
       openLinkEmailDialog={openSettingsLinkEmailDialog}
       {openPaymentModal}
+      {openCustomizedPayment}
       {methods}
       {paymentMethodsDisplayMode}
       {openPremiumTopupModal}
@@ -695,6 +701,7 @@
       {supportUnreadLoaded}
       {supportUnreadLoading}
       {supportUrl}
+      {requiredChannelUrl}
       {t}
       {telegramMiniAppContext}
       {telegramNotificationsNeedPrompt}

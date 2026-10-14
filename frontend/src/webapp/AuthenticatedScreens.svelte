@@ -22,6 +22,7 @@
   import type { UserNavigationItem } from "$lib/webapp/extensionHost";
   import WebAppShell from "./WebAppShell.svelte";
   import HomeScreen from "./screens/HomeScreen.svelte";
+  import ZumSubscriptionScreen from "./screens/ZumSubscriptionScreen.svelte";
   import ScreenLoading from "./screens/ScreenLoading.svelte";
   import SettingsScreen from "./screens/SettingsScreen.svelte";
   import NotificationSettingsScreen from "./screens/NotificationSettingsScreen.svelte";
@@ -39,6 +40,7 @@
     MenuButtonView,
     OpenLinkAction,
     PaymentMethodView,
+    PlanView,
     ReferralBonusDetail,
     ReferralState,
     StringAction,
@@ -60,6 +62,7 @@
     activateTrial: VoidAction;
     activeTab?: string;
     appSettings?: AppSettings;
+    plans: PlanView[];
     balance?: BalanceView;
     applyPromo: VoidAction;
     autoRenewBusy?: boolean;
@@ -87,6 +90,7 @@
     goDevices: VoidAction;
     goHome: VoidAction;
     goInvite: VoidAction;
+    goSubscription: VoidAction;
     goInstall: VoidAction;
     goPartner: VoidAction;
     partnerEnabled?: boolean;
@@ -118,6 +122,11 @@
     openInstallOrConnect: VoidAction;
     openLinkEmailDialog: VoidAction;
     openPaymentModal: VoidAction;
+    openCustomizedPayment: (options: {
+      durationDays: number;
+      deviceTotal: number;
+      trafficGb: number | null;
+    }) => void;
     methods?: PaymentMethodView[];
     paymentMethodsDisplayMode?: "dropdown" | "buttons" | string;
     openPremiumTopupModal: VoidAction;
@@ -162,6 +171,7 @@
     supportUnreadLoaded?: boolean;
     supportUnreadLoading?: boolean;
     supportUrl?: string;
+    requiredChannelUrl?: string;
     themeOptions?: ThemeOption[];
     themePreference?: string;
     themeSwitcherVisible?: boolean;
@@ -192,6 +202,7 @@
     activateTrial,
     activeTab = "home",
     appSettings = {},
+    plans,
     balance = {} as BalanceView,
     applyPromo,
     autoRenewBusy = false,
@@ -219,6 +230,7 @@
     goDevices,
     goHome,
     goInvite,
+    goSubscription,
     goInstall,
     goPartner,
     partnerEnabled = false,
@@ -250,6 +262,7 @@
     openInstallOrConnect,
     openLinkEmailDialog,
     openPaymentModal,
+    openCustomizedPayment,
     methods = [],
     paymentMethodsDisplayMode = "dropdown",
     openPremiumTopupModal,
@@ -294,6 +307,7 @@
     supportUnreadLoaded = false,
     supportUnreadLoading = false,
     supportUrl = "",
+    requiredChannelUrl = "",
     themeOptions = [],
     themePreference = THEME_PREFERENCE_DEFAULT,
     themeSwitcherVisible = false,
@@ -430,6 +444,7 @@
   {goDevices}
   {goHome}
   {goInvite}
+  {goSubscription}
   {goPartner}
   bonusesNavigationVisible={programEntryPlacement.bonusesNavigationVisible ||
     extensionSections.includes("invite")}
@@ -455,10 +470,10 @@
   >
     {#if screen === "home"}
       <HomeScreen
+        {apiClient}
         {appSettings}
+        {plans}
         {balance}
-        {brand}
-        {brandTitle}
         {canChangeTariff}
         {currentTariffName}
         {hasActiveTariffSubscription}
@@ -468,6 +483,8 @@
         {regularTrafficTopupBarClickable}
         {regularTrafficTopupUnlocked}
         {referral}
+        {copyText}
+        {requiredChannelUrl}
         {subscription}
         {autoRenewBusy}
         {linkTelegramBusy}
@@ -477,13 +494,13 @@
         {termUnitLabel}
         {trafficMode}
         {trialBusy}
-        {activateTrial}
         {toggleAutoRenew}
         {linkTelegramAndActivateTrial}
         {linkTelegramAndClaimReferralWelcome}
         {openTelegramNotificationsBot}
         openConnectLink={openInstallOrConnect}
         {openPaymentModal}
+        {openCustomizedPayment}
         openBalanceTopup={() => (balanceTopupOpen = true)}
         {openRegularTopupModal}
         {openPremiumTopupModal}
@@ -496,6 +513,20 @@
         {homeElementVisibility}
         {statusStore}
         {primaryPayActionLabel}
+        {t}
+      />
+    {:else if screen === "subscription"}
+      <ZumSubscriptionScreen
+        {subscription}
+        {user}
+        {trafficMode}
+        {openPaymentModal}
+        onTrialRequest={() => goHome()}
+        {trialBusy}
+        {copyText}
+        {privacyPolicyUrl}
+        {userAgreementUrl}
+        {openExternalLink}
         {t}
       />
     {:else if screen === "install"}

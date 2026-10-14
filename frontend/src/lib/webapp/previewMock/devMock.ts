@@ -118,9 +118,9 @@ export function previewPeriodPlan(
 
 export const DEV_MOCK: PreviewMock = {
   config: {
-    title: "/minishop",
+    title: "ZumVPN",
     primaryColor: "#00fe7a",
-    logoUrl: "/webapp-default-logo.webp",
+    logoUrl: "/zumvpn_icon.png",
     faviconUrl: "/webapp-favicon/19b2a242e5b7bc2d/icon-180.png",
     faviconUseCustom: false,
     trialEnabled: true,

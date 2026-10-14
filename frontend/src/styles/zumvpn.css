@@ -1,0 +1,724 @@
+/* ZumVPN Mini App visual language, adapted from zum_vpn/miniapp/index.html.
+   Keep these tokens inside the user-facing shell so the Minishop admin UI
+   continues to use its configured theme. */
+.phone-screen {
+  background: linear-gradient(180deg, #000000 0%, #0a0a0a 100%);
+  color-scheme: dark;
+  --accent: #3db4f2;
+  --accent-contrast: #ffffff;
+  --bg: #000000;
+  --panel: #1a1a1a;
+  --panel-2: #0f0f0f;
+  --panel-3: #242424;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --text: #ffffff;
+  --muted: #888888;
+  --dim: #626262;
+  --success: #3db4f2;
+  --success-text: #8bd5ff;
+  --success-soft: rgba(61, 180, 242, 0.12);
+  --success-border: rgba(61, 180, 242, 0.3);
+  --info: #3db4f2;
+  --info-text: #8bd5ff;
+  --blue: #3db4f2;
+  --radius: 16px;
+  --radius-card: 16px;
+  --radius-control: 12px;
+  --radius-dialog: 20px;
+  --radius-inner: 12px;
+  --nav-bg: rgba(20, 20, 20, 0.94);
+  --rail-bg: rgba(15, 15, 15, 0.94);
+  --shadow-soft: 0 8px 28px rgba(0, 0, 0, 0.34);
+  --shadow-strong: 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+
+.phone-screen.home-screen {
+  background: linear-gradient(180deg, #000000 0%, #0a0a0a 100%);
+}
+
+.phone-screen .home-layout {
+  min-height: 100dvh;
+  height: auto;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
+  padding-top: 12px;
+}
+
+.phone-screen .home-brand {
+  justify-content: flex-start;
+  gap: 12px;
+  padding-top: 0;
+}
+
+.phone-screen .home-logo-slot {
+  width: 133px;
+  height: 133px;
+  min-height: 133px;
+  flex: 0 0 133px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3db4f2 0%, #2c9dd9 100%);
+  box-shadow:
+    0 10px 40px rgba(61, 180, 242, 0.4),
+    0 0 60px rgba(61, 180, 242, 0.2);
+}
+
+.phone-screen .home-brand .brand-mark,
+.phone-screen .home-brand .brand-mark.brand-mark-xl {
+  width: 48px;
+  height: 48px;
+  color: #ffffff;
+  font-size: 36px;
+}
+
+.phone-screen .home-brand h1 {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.phone-screen .home-bottom {
+  gap: 12px;
+  align-self: start;
+}
+
+.phone-screen .home-bottom > .card,
+.phone-screen .home-bottom .trial-card,
+.phone-screen .home-bottom .traffic-card-compact,
+.phone-screen .home-bottom .balance-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: #1a1a1a;
+  box-shadow: none;
+}
+
+.phone-screen .home-balance-summary,
+.phone-screen .home-balance-summary small,
+.phone-screen .home-balance-summary strong {
+  color: #ffffff !important;
+}
+
+.phone-screen .trial-offer-card {
+  border-color: rgba(61, 180, 242, 0.3);
+  background: linear-gradient(135deg, rgba(61, 180, 242, 0.09), #1a1a1a 55%);
+}
+
+.phone-screen .bottom-nav {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(20, 20, 20, 0.94);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.34);
+}
+
+.phone-screen .bottom-nav button.active {
+  color: #3db4f2;
+}
+.phone-screen .bottom-nav button[data-nav-level="secondary"] { opacity: .82; }
+.phone-screen .bottom-nav button[data-nav-level="secondary"] > svg { width: 19px; height: 19px; }
+
+.phone-screen .btn-primary,
+.phone-screen button[data-variant="default"] {
+  background: linear-gradient(135deg, #3db4f2 0%, #2c9dd9 100%);
+  color: #ffffff;
+}
+
+/* Keep the existing Minishop checkout behavior while giving its payment and
+   plan-selection surfaces the same ZumVPN dark/blue visual language. */
+.dialog-card.payment-dialog-card,
+.phone-screen .dialog-card.zumvpn-trial-confirm-dialog,
+.phone-screen .dialog-card.zumvpn-plan-builder-dialog {
+  border: 1px solid rgba(61, 180, 242, 0.22);
+  border-radius: 20px;
+  background: #111416;
+  color: #f5f8fa;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.6);
+}
+
+.payment-dialog-card .dialog-head h2,
+.payment-dialog-card .payment-checkout-header h2,
+.phone-screen .checkout-entry .checkout-card h1 {
+  color: #f5f8fa;
+}
+
+.payment-dialog-card .checkout-tariff-card,
+.payment-dialog-card .period-card,
+.payment-dialog-card .method-card,
+.payment-dialog-card .checkout-addon-slider-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: #191d20;
+  color: #f5f8fa;
+  box-shadow: none;
+}
+
+.payment-dialog-card .period-card,
+.payment-dialog-card .method-card {
+  background-image: none;
+}
+
+.payment-dialog-card .checkout-tariff-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.payment-dialog-card .checkout-tariff-card-head strong,
+.payment-dialog-card .period-card strong,
+.payment-dialog-card .method-card strong {
+  color: #f5f8fa;
+}
+
+.payment-dialog-card .checkout-tariff-card .checkout-addon-label,
+.payment-dialog-card .checkout-tariff-card small,
+.payment-dialog-card .period-card em,
+.payment-dialog-card .period-card small {
+  color: #aab4b9;
+}
+
+.payment-dialog-card .period-card.active,
+.payment-dialog-card .method-card.active {
+  border-color: #3db4f2;
+  background: rgba(61, 180, 242, 0.13);
+  box-shadow: 0 0 0 1px rgba(61, 180, 242, 0.38);
+}
+
+.payment-dialog-card .payment-submit-button {
+  border-color: #168dd0;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #3db4f2, #218fc9);
+  color: #ffffff;
+}
+
+.payment-dialog-card .checkout-tariff-card .checkout-tariff-fact {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f5f8fa;
+}
+
+.payment-dialog-card .checkout-tariff-editor-inner,
+.payment-dialog-card .checkout-tariff-editor-mode {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #141719;
+}
+
+.payment-dialog-card .checkout-tariff-edit {
+  color: #70c8f5;
+}
+
+.payment-dialog-card .zumvpn-payment-summary {
+  padding: 13px 14px;
+  border: 1px solid rgba(61, 180, 242, 0.24);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(61, 180, 242, 0.08), #15191b 72%);
+  color: #f5f8fa;
+}
+
+.payment-dialog-card .zumvpn-payment-summary-caption {
+  margin-bottom: 5px;
+  color: #70c8f5;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.payment-dialog-card .zumvpn-payment-plan-name {
+  display: block;
+  margin-bottom: 6px;
+  color: #f5f8fa;
+  font-size: 14px;
+}
+
+.payment-dialog-card .zumvpn-payment-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  color: #aab4b9;
+  font-size: 12px;
+}
+
+.payment-dialog-card .zumvpn-payment-summary-row strong {
+  color: #f5f8fa;
+  text-align: right;
+}
+
+.phone-screen .checkout-entry {
+  min-height: 100dvh;
+  color: #f5f8fa;
+  background: #080a0b;
+}
+
+.phone-screen .checkout-entry .checkout-side,
+.phone-screen .checkout-entry .checkout-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: #121517;
+}
+
+.phone-screen .checkout-entry .checkout-notice {
+  border-color: rgba(61, 180, 242, 0.24);
+  border-radius: 12px;
+  color: #b9e9ff;
+  background: rgba(61, 180, 242, 0.08);
+}
+
+.phone-screen .zumvpn-trial-confirm-facts,
+.phone-screen .zumvpn-builder-presets,
+.phone-screen .zumvpn-builder-section,
+.phone-screen .zumvpn-builder-quote {
+  display: grid;
+  gap: 10px;
+}
+
+.phone-screen .zumvpn-trial-confirm-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+.phone-screen .zumvpn-trial-confirm-facts > div,
+.phone-screen .zumvpn-builder-presets button,
+.phone-screen .zumvpn-builder-section,
+.phone-screen .zumvpn-builder-quote {
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 13px;
+  background: #1a1d1f;
+}
+
+.phone-screen .zumvpn-trial-confirm-facts small,
+.phone-screen .zumvpn-trial-confirm-facts strong,
+.phone-screen .zumvpn-builder-quote span,
+.phone-screen .zumvpn-builder-quote strong {
+  display: block;
+}
+
+.phone-screen .zumvpn-trial-confirm-facts small,
+.phone-screen .zumvpn-builder-quote span {
+  margin-bottom: 5px;
+  color: #929da2;
+  font-size: 11px;
+}
+
+.phone-screen .zumvpn-trial-channel-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid rgba(61, 180, 242, 0.22);
+  border-radius: 13px;
+  color: #b9e9ff;
+  background: rgba(61, 180, 242, 0.08);
+}
+
+.phone-screen .zumvpn-trial-channel-note p,
+.phone-screen .zumvpn-builder-limits {
+  margin: 0;
+  color: #b5c0c5;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.phone-screen .zumvpn-trial-confirm-actions,
+.phone-screen .zumvpn-builder-entry {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.phone-screen .zumvpn-builder-presets {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.phone-screen .zumvpn-builder-presets button {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: #f4f7f8;
+  text-align: left;
+  cursor: pointer;
+}
+
+.phone-screen .zumvpn-builder-presets button.selected {
+  border-color: rgba(61, 180, 242, 0.62);
+  background: rgba(61, 180, 242, 0.12);
+}
+
+.phone-screen .zumvpn-builder-presets small,
+.phone-screen .zumvpn-builder-section label span {
+  color: #929da2;
+  font-size: 11px;
+}
+
+.phone-screen .zumvpn-builder-section label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.phone-screen .zumvpn-builder-section label .ui-range-input {
+  grid-column: 1 / -1;
+}
+
+.phone-screen .zumvpn-builder-section output {
+  color: #f5f8fa;
+  font-size: 12px;
+}
+
+.phone-screen .zumvpn-builder-traffic > div {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.phone-screen .zumvpn-builder-traffic .button {
+  flex: 1;
+  min-width: 0;
+}
+
+.phone-screen .zumvpn-builder-quote {
+  margin-top: 12px;
+}
+
+.phone-screen .zumvpn-builder-quote > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.phone-screen .zumvpn-builder-quote .zumvpn-builder-limits {
+  margin: 4px 0;
+}
+
+@media (max-width: 390px) {
+  .phone-screen .zumvpn-builder-presets {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Screen-specific surfaces follow the original ZumVPN mini-app cards. */
+.phone-screen .zumvpn-home-layout {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 560px);
+  min-height: 100dvh;
+  gap: 12px;
+  padding: 18px 16px calc(100px + env(safe-area-inset-bottom));
+  margin: 0 auto;
+}
+.phone-screen .zumvpn-home-top { display: grid; justify-items: center; gap: 9px; }
+.phone-screen .zumvpn-connection-circle { display: grid; place-items: center; width: 112px; height: 112px; border: 1px solid rgba(61,180,242,.4); border-radius: 50%; color: #fff; background: linear-gradient(135deg,#3db4f2,#2c9dd9); box-shadow: 0 10px 40px rgba(61,180,242,.35),0 0 55px rgba(61,180,242,.16); }
+.phone-screen .zumvpn-connection-circle.inactive { border-color:rgba(248,81,73,.55); background:linear-gradient(135deg,#e34b45,#a9272d); box-shadow:0 10px 40px rgba(248,81,73,.28),0 0 55px rgba(248,81,73,.14); }
+.phone-screen .zumvpn-connection-circle.active { border-color:rgba(61,180,242,.55); }
+.phone-screen .zumvpn-connection-circle svg { width: 42px; height: 42px; }
+.phone-screen .zumvpn-connection-status { color: #9da7ad; font-size: 12px; }
+.phone-screen .zumvpn-connection-status.inactive { color:#ff7770; }
+.phone-screen .zumvpn-connection-status.active { color:#72c9f5; }
+.phone-screen .zumvpn-instruction-card { display:flex; align-items:center; gap:12px; width:100%; min-height:68px; padding:11px 13px; border:1px solid #292f33; border-radius:15px; color:#fff; background:#1a1a1a; text-align:left; }
+.phone-screen .zumvpn-instruction-icon,.phone-screen .zumvpn-icon-tile { display:grid; place-items:center; width:38px; height:38px; flex:0 0 auto; border-radius:11px; color:#72c9f5; background:rgba(61,180,242,.13); }
+.phone-screen .zumvpn-instruction-icon svg { width:22px; height:22px; }
+.phone-screen .zumvpn-instruction-copy { display:grid; min-width:0; flex:1; gap:3px; }
+.phone-screen .zumvpn-instruction-copy strong { font-size:13px; font-weight:650; }
+.phone-screen .zumvpn-instruction-copy small { color:#858e93; font-size:11px; }
+.phone-screen .zumvpn-chevron { width:19px; height:19px; color:#777; }
+.phone-screen .zumvpn-subscription-card,.phone-screen .zumvpn-page .card { border:1px solid #292929; border-radius:16px; background:#1a1a1a; box-shadow:none; }
+.phone-screen .zumvpn-home-bottom { display:grid; align-content:start; gap:12px; }
+.phone-screen .zumvpn-subscription-header,.phone-screen .zumvpn-plan-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:9px; }
+.phone-screen .zumvpn-subscription-header h2 { margin:0; font-size:15px; font-weight:700; }
+.phone-screen .zumvpn-subscription-status { flex:0 0 auto; padding:5px 9px; border:1px solid rgba(61,180,242,.28); border-radius:20px; color:#72c9f5; background:rgba(61,180,242,.1); font-size:10px; font-weight:700; }
+.phone-screen .zumvpn-subscription-status.inactive { border-color:#363636; color:#a1a1a1; background:#242424; }
+.phone-screen .zumvpn-subscription-account { margin:8px 0 12px; color:#818b91; font-size:12px; }
+.phone-screen .zumvpn-subscription-time,.phone-screen .zumvpn-term-block { padding:13px; border:1px solid #2a2a2a; border-radius:12px; background:linear-gradient(135deg,#1a1a1a,#0f0f0f); }
+.phone-screen .zumvpn-time-header { display:flex; align-items:end; justify-content:space-between; gap:8px; }
+.phone-screen .zumvpn-time-remaining { display:grid; gap:2px; }
+.phone-screen .zumvpn-time-remaining strong { font-size:30px; line-height:1; }
+.phone-screen .zumvpn-time-remaining span,.phone-screen .zumvpn-time-end { color:#929da2; font-size:11px; }
+.phone-screen .zumvpn-time-end { max-width:48%; text-align:right; }
+.phone-screen .zumvpn-progress-track,.phone-screen .zumvpn-resource-track { height:3px; margin-top:9px; overflow:hidden; border-radius:4px; background:#2b3338; }
+.phone-screen .zumvpn-progress-track span,.phone-screen .zumvpn-resource-track span { display:block; height:100%; border-radius:inherit; background:#3db4f2; }
+.phone-screen .zumvpn-subscription-link { display:grid; gap:8px; margin-top:11px; padding:11px; border-radius:12px; background:#101214; }
+.phone-screen .zumvpn-subscription-caption { display:flex; align-items:center; gap:6px; color:#8e989d; font-size:10px; }
+.phone-screen .zumvpn-subscription-caption svg { width:14px; height:14px; }
+.phone-screen .zumvpn-subscription-url { overflow-wrap:anywhere; color:#effaff; font-size:11px; }
+.phone-screen .zumvpn-copy-button { min-height:33px; border-color:rgba(61,180,242,.3); color:#72c9f5; background:rgba(61,180,242,.1); font-size:11px; }
+.phone-screen .zumvpn-manage-button { width:100%; margin-top:11px; }
+.phone-screen .zumvpn-action-stack { gap:8px; }
+.phone-screen .zumvpn-page { width:min(100%,560px); min-height:100dvh; padding:14px 16px calc(100px + env(safe-area-inset-bottom)); margin:0 auto; }
+.phone-screen .zumvpn-page-heading { padding:4px 2px 2px; margin:0 0 12px; }
+.phone-screen .zumvpn-page-heading h2 { margin:0; color:#f5f8fa !important; font-size:23px; font-weight:750; }
+.phone-screen .zumvpn-page-heading p { margin:5px 0 0; color:#8d979c; font-size:12px; }
+.phone-screen .app-header .brand-row strong { color:#f5f8fa !important; }
+.phone-screen .app-header .brand-mark { color:#3db4f2; }
+.phone-screen .zumvpn-account-card,.phone-screen .zumvpn-plan-card { padding:14px; margin:0 0 12px; }
+.phone-screen .zumvpn-account-row { display:flex; align-items:center; gap:11px; }
+.phone-screen .zumvpn-account-row > span:last-child { display:grid; gap:4px; min-width:0; }
+.phone-screen .zumvpn-account-row small,.phone-screen .zumvpn-plan-heading small,.phone-screen .zumvpn-term-block small { color:#858f94; font-size:10px; letter-spacing:.07em; }
+.phone-screen .zumvpn-account-row strong { overflow-wrap:anywhere; font-size:13px; }
+.phone-screen .zumvpn-link-block { padding-top:11px; margin-top:11px; border-top:1px solid #292f33; }
+.phone-screen .zumvpn-section-label { display:flex; align-items:center; gap:6px; margin-bottom:7px; color:#a7b1b6; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+.phone-screen .zumvpn-section-label svg { width:13px; height:13px; color:#55bff3; }
+.phone-screen .zumvpn-link-row { display:flex; align-items:center; gap:8px; min-width:0; padding:6px 7px 6px 10px; border:1px solid #2b2b2b; border-radius:11px; background:linear-gradient(145deg,#171717 0%,#101010 100%); }
+.phone-screen .zumvpn-link-row > span { min-width:0; flex:1; overflow:hidden; color:#f0f5f7; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.phone-screen .zumvpn-inline-copy { width:auto; min-height:30px; flex:0 0 auto; padding:0 10px; border:1px solid rgba(61,180,242,.25); border-radius:999px; color:#55bff3; background:rgba(36,145,197,.18); font-size:10px; font-weight:700; }
+.phone-screen .zumvpn-plan-heading strong { display:block; font-size:13px; letter-spacing:.03em; }
+.phone-screen .zumvpn-plan-heading small { display:block; margin-top:5px; letter-spacing:0; }
+.phone-screen .zumvpn-term-block { display:flex; align-items:end; justify-content:space-between; gap:10px; margin-top:13px; }
+.phone-screen .zumvpn-term-block > div { display:grid; gap:4px; }
+.phone-screen .zumvpn-term-block strong { font-size:29px; line-height:1; }
+.phone-screen .zumvpn-term-block i { margin-left:4px; color:#a7b1b6; font-size:11px; font-style:normal; font-weight:500; }
+.phone-screen .zumvpn-term-block > span { max-width:48%; color:#adb6ba; font-size:11px; text-align:right; }
+.phone-screen .zumvpn-resource-list { display:grid; gap:9px; margin-top:11px; }
+.phone-screen .zumvpn-resource { padding:8px 10px; }
+.phone-screen .zumvpn-resource > div:first-child { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.phone-screen .zumvpn-resource > div:first-child span { color:#a8b1b5; font-size:9px; }
+.phone-screen .zumvpn-resource > div:first-child strong { color:#fff; font-size:12px; text-align:right; }
+.phone-screen .zumvpn-resource-track { margin-top:6px; }
+.phone-screen .zumvpn-resource-track span.unlimited { width:100%; background:rgba(61,180,242,.4); }
+.phone-screen .zumvpn-plan-card .zumvpn-resource { padding:8px 10px; border:0; border-radius:0; background:transparent; }
+.phone-screen .zumvpn-renew-button { min-height:46px; margin:0 0 10px; }
+.phone-screen .zumvpn-legal { padding:4px 0 10px; }
+.phone-screen .zumvpn-legal h3 { margin:4px 2px 8px; color:#888; font-size:10px; letter-spacing:.06em; }
+.phone-screen .zumvpn-legal button { display:flex; justify-content:space-between; width:100%; min-height:50px; padding:9px 11px; margin-bottom:7px; border:1px solid #292929; border-radius:12px; color:#eee; background:#1a1a1a; text-align:left; }
+.phone-screen .zumvpn-legal button span { color:#777; }
+.phone-screen .referral-program-shell { padding:0; }
+.phone-screen .referral-program-content > .bonus-card,.phone-screen .referral-program-content .referral-stats,.phone-screen .referral-program-content .referral-link-item,.phone-screen .referral-program-content .referral-bonus-list { border-color:#292929; border-radius:15px; background:#1a1a1a; box-shadow:none; }
+.phone-screen .referral-program-content > .bonus-card { padding:14px; border-color:rgba(61,180,242,.3); background:rgba(61,180,242,.12); }
+.phone-screen .referral-program-content .bonus-card-head svg { color:#72c9f5; }
+.phone-screen .referral-program-content .referral-stats { gap:8px; padding:12px; margin:12px 0; }
+.phone-screen .referral-program-content .referral-link-item { padding:12px; margin:10px 0; }
+.phone-screen .referral-program-content .card-heading { color:#a8b1b5; font-size:11px; letter-spacing:.04em; text-transform:uppercase; }
+.phone-screen .referral-program-content .referral-bonus-list { padding:12px; }
+.phone-screen .content.with-nav:has(.referral-program-shell) { width:min(100%,560px); padding:14px 16px calc(100px + env(safe-area-inset-bottom)); margin:0 auto; }
+.phone-screen .content.with-nav:has(.referral-program-shell) > :not(:first-child) { margin-top:12px; }
+.phone-screen .content.with-nav:has(.referral-program-shell) .bonus-card-head { gap:11px; }
+.phone-screen .content.with-nav:has(.referral-program-shell) .bonus-card-head strong { font-size:15px; }
+.phone-screen .content.with-nav:has(.referral-program-shell) .bonus-card-head p { color:#a7b3b8; font-size:11px; }
+.phone-screen .content.with-nav:has(.referral-program-shell) .referral-stat dd { color:#fff; font-size:21px; }
+
+/* Consistent user-facing typography and card surfaces across mini-app screens. */
+.phone-screen {
+  --muted: #a3a8ad;
+  --dim: #83898e;
+  --panel: #1b1b1b;
+  --panel-2: #111111;
+  --panel-3: #242424;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  color: #f5f8fa;
+}
+
+.phone-screen main :is(h1, h2, h3, h4),
+.phone-screen main .card :is(strong, .value, .amount),
+.phone-screen .home-balance-summary strong {
+  color: #f5f8fa !important;
+}
+
+.phone-screen main :is(p, small, label, dt, dd, .muted, .description),
+.phone-screen .home-balance-summary small {
+  color: #a3a8ad !important;
+}
+
+.phone-screen main .card,
+.phone-screen main section.card,
+.phone-screen .home-balance-card,
+.phone-screen .zumvpn-subscription-card,
+.phone-screen .trial-card,
+.phone-screen .referral-program-content > .bonus-card,
+.phone-screen .referral-program-content .referral-stats,
+.phone-screen .referral-program-content .referral-link-item,
+.phone-screen .referral-program-content .referral-bonus-list {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: #1b1b1b;
+  box-shadow: none;
+}
+
+.phone-screen main .card :is(.inner-card, .summary-card, .subscription-purchase-description),
+.phone-screen .zumvpn-subscription-time,
+.phone-screen .zumvpn-subscription-link,
+.phone-screen .zumvpn-term-block,
+.phone-screen .zumvpn-resource,
+.phone-screen .trial-card-facts > span {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: linear-gradient(145deg, #202020 0%, #121212 100%);
+}
+
+.phone-screen main :is(input, select, textarea),
+.phone-screen main :is(.settings-row, .period-card, .method-card) {
+  border-color: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: #f5f8fa;
+}
+
+.phone-screen main :is(input, select, textarea)::placeholder {
+  color: #a3a8ad;
+  opacity: 1;
+}
+
+.phone-screen button[data-variant="default"],
+.phone-screen .btn-primary,
+.phone-screen .payment-submit-button,
+.phone-screen .zumvpn-manage-button,
+.phone-screen .zumvpn-renew-button {
+  border-color: #219bd5;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #3db4f2 0%, #299ed8 100%);
+  color: #ffffff !important;
+}
+
+.phone-screen .zumvpn-subscription-status,
+.phone-screen .badge,
+.phone-screen [class*="badge"],
+.phone-screen [class*="status-pill"] {
+  border-color: rgba(61, 180, 242, 0.28);
+  border-radius: 999px;
+  color: #72c9f5 !important;
+  background: rgba(61, 180, 242, 0.14);
+}
+
+.phone-screen .zumvpn-subscription-status.inactive,
+.phone-screen .zumvpn-connection-status.inactive {
+  border-color: rgba(248, 81, 73, 0.35);
+  color: #ff7770 !important;
+  background: rgba(248, 81, 73, 0.12);
+}
+
+.phone-screen .zumvpn-referrals-page {
+  width: min(100%, 560px);
+  padding: 14px 16px calc(100px + env(safe-area-inset-bottom));
+  margin: 0 auto;
+}
+.phone-screen .zumvpn-referral-bonus-card,
+.phone-screen .zumvpn-referral-link-card,
+.phone-screen .zumvpn-referral-recent > .card,
+.phone-screen .zumvpn-referral-details {
+  padding: 13px;
+  border: 1px solid #292929;
+  border-radius: 15px;
+  background: #1a1a1a;
+  box-shadow: none;
+}
+.phone-screen .referral-program-content { display: grid; gap: 12px; }
+.phone-screen .zumvpn-referral-bonus-card { gap: 12px; }
+.phone-screen .zumvpn-referral-bonus-card .bonus-card-head { gap: 10px; }
+.phone-screen .zumvpn-referral-bonus-card .bonus-card-head > svg {
+  width: 38px;
+  height: 38px;
+  padding: 7px;
+  border: 1px solid rgba(61,180,242,.24);
+  border-radius: 11px;
+  color: #55bff3;
+  background: rgba(61,180,242,.12);
+}
+.phone-screen .zumvpn-referral-bonus-card .bonus-card-head small {
+  display: block;
+  margin-bottom: 3px;
+  color: #55bff3;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+.phone-screen .zumvpn-referral-bonus-card .bonus-card-head strong {
+  color: #fff;
+  font-size: 13px;
+}
+.phone-screen .zumvpn-referral-bonus-card .bonus-card-head p { margin-top: 4px; font-size: 10px; line-height: 1.35; }
+.phone-screen .zumvpn-referral-rewards { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.phone-screen .zumvpn-referral-rewards > div {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #2b2b2b;
+  border-radius: 10px;
+  background: linear-gradient(145deg,#171717 0%,#101010 100%);
+}
+.phone-screen .zumvpn-referral-rewards strong { display: block; color: #f4f8fa; font-size: 13px; }
+.phone-screen .zumvpn-referral-rewards small { display: block; margin-top: 2px; color: #929292; font-size: 9px; }
+.phone-screen .zumvpn-referral-link-card { display: grid; gap: 10px; }
+.phone-screen .zumvpn-referral-link-stats { display: grid; grid-template-columns: 1fr 1fr; }
+.phone-screen .zumvpn-referral-link-stats > div { display: grid; gap: 2px; min-width: 0; padding-right: 8px; }
+.phone-screen .zumvpn-referral-link-stats > div + div { padding-left: 10px; border-left: 1px solid #303030; }
+.phone-screen .zumvpn-referral-link-stats small { color: #a7b1b6; font-size: 9px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.phone-screen .zumvpn-referral-link-stats strong { color: #fff; font-size: 18px; line-height: 1.05; }
+.phone-screen .zumvpn-referral-link-stats strong i { color: #a7b1b6; font-size: 10px; font-style: normal; font-weight: 550; }
+.phone-screen .zumvpn-referral-link-stats span,.phone-screen .zumvpn-referral-link-stats em { color: #929292; font-size: 9px; font-style: normal; }
+.phone-screen .zumvpn-referral-links h3,.phone-screen .zumvpn-referral-recent h3 {
+  margin: 0 0 7px;
+  color: #a7b1b6;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.phone-screen .zumvpn-referral-links .referral-link-item { gap: 5px; margin: 0; }
+.phone-screen .zumvpn-referral-links .referral-link-label { display: none; }
+.phone-screen .zumvpn-referral-links .copy-link-field { grid-template-columns: minmax(0,1fr) auto auto; gap: 6px; }
+.phone-screen .zumvpn-referral-links .copy-link-field .input {
+  min-height: 37px;
+  height: 37px;
+  padding: 0 10px;
+  border: 1px solid #2b2b2b;
+  border-radius: 10px;
+  color: #f0f5f7;
+  background: linear-gradient(145deg,#171717 0%,#101010 100%);
+  font-size: 10px;
+}
+.phone-screen .zumvpn-referral-links .copy-link-field .btn { min-height: 37px; height: 37px; padding: 0 10px; border-radius: 10px; font-size: 10px; }
+.phone-screen .zumvpn-referral-links .copy-link-field .btn-secondary { width: 37px; padding: 0; }
+.phone-screen .zumvpn-referral-unavailable { padding: 10px; border: 1px solid #2b2b2b; border-radius: 10px; color: #dce3e6; background: linear-gradient(145deg,#171717 0%,#101010 100%); font-size: 10px; font-weight: 600; }
+.phone-screen .zumvpn-referral-explainer { margin: 7px 1px 0; color: #929292; font-size: 9px; line-height: 1.4; }
+.phone-screen .zumvpn-referral-share { width: 100%; min-height: 38px; margin-top: 7px; border-radius: 10px; font-size: 11px; }
+.phone-screen .zumvpn-referral-recent > .card { min-height: 42px; display: grid; place-items: center; color: #929292; font-size: 10px; text-align: center; }
+.phone-screen .zumvpn-referral-details { gap: 8px; }
+.phone-screen .zumvpn-referral-details > h3 { color: #fff; font-size: 12px; }
+.phone-screen .zumvpn-referral-details .referral-bonus-row { padding: 9px 10px; border-color: #2b2b2b; border-radius: 10px; background: linear-gradient(145deg,#171717 0%,#101010 100%); }
+.phone-screen .zumvpn-referral-extras { display: grid; gap: 10px; }
+
+.phone-screen .bottom-nav.bottom-nav-zumvpn {
+  height: 66px;
+  min-height: 66px;
+  grid-template-columns: repeat(var(--bottom-nav-visible-items, 5), minmax(0, 1fr));
+  overflow: hidden;
+}
+.phone-screen .bottom-nav.bottom-nav-zumvpn button {
+  grid-template-rows: 22px 12px;
+  align-content: center;
+  gap: 4px;
+  padding: 5px 2px;
+}
+.phone-screen .bottom-nav.bottom-nav-zumvpn .bottom-nav-label {
+  display: block;
+  font-size: 9px;
+  line-height: 1.1;
+}
+
+@media (min-width: 1024px) {
+  .phone-screen {
+    background: transparent;
+  }
+
+  .phone-screen.home-screen {
+    background: transparent;
+  }
+
+  .phone-screen .home-layout {
+    width: min(100%, 760px);
+    height: auto;
+    min-height: calc(100dvh - 70px);
+    grid-template-rows: auto 1fr;
+    gap: 24px;
+    padding-top: 0;
+  }
+
+  .phone-screen .home-brand {
+    align-self: start;
+  }
+
+  .phone-screen .home-bottom {
+    width: min(100%, 760px);
+    align-self: start;
+  }
+}

@@ -104,11 +104,13 @@
 
   const stableMockRuntime = initialMockRuntime();
 
-  const FALLBACK_BRAND_TITLE = "/minishop";
+  const FALLBACK_BRAND_TITLE = "ZumVPN";
+  const FALLBACK_BRAND_LOGO = "/zumvpn_icon.png";
   const EMPTY_MOCK: WebappMockSource = {
     config: {
       ...FALLBACK_WEBAPP_CONFIG,
       title: FALLBACK_BRAND_TITLE,
+      logoUrl: FALLBACK_BRAND_LOGO,
     },
     data: {
       plans: [],
@@ -157,6 +159,8 @@
     ...MOCK_SOURCE.config,
     ...(MOCK ? MOCK.config : {}),
     ...(injectedConfig || {}),
+    title: FALLBACK_BRAND_TITLE,
+    logoUrl: FALLBACK_BRAND_LOGO,
   } as WebappConfig;
   const docsDemoRouter = createDocsDemoRouter({
     currentSearchParams,

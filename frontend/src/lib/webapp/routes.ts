@@ -3,6 +3,7 @@ import { ADMIN_SECTIONS, APP_SECTION_PATHS } from "./constants";
 export type WebappSection =
   | "extensions"
   | "home"
+  | "subscription"
   | "invite"
   | "partner"
   | "install"
@@ -25,6 +26,7 @@ export function normalizeSection(value: unknown): WebappSection {
   if (
     section === "extensions" ||
     section === "invite" ||
+    section === "subscription" ||
     section === "partner" ||
     section === "install" ||
     section === "trial" ||
@@ -88,6 +90,7 @@ export function sectionFromPath(pathname: unknown, routePrefix: unknown = ""): W
     .replace(/\/+$/, "");
   const routePath = stripRoutePrefix(normalizedPath, routePrefix).toLowerCase().replace(/\/+$/, "");
   if (!routePath || routePath === "/") return "home";
+  if (routePath === "/subscription") return "subscription";
   if (routePath === "/extensions" || routePath.startsWith("/extensions/")) return "extensions";
   if (routePath === "/admin" || routePath.startsWith("/admin/")) return "admin";
   if (routePath === "/support" || routePath.startsWith("/support/")) return "support";

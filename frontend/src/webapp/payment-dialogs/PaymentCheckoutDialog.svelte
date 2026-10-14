@@ -34,7 +34,7 @@
     checkoutBalanceLookupPlan,
     createCheckoutBalancePreload,
   } from "$lib/webapp/checkoutBalancePreload.svelte.js";
-  import { formatCompactNumber, formatMoney } from "$lib/webapp/formatters.js";
+  import { formatCompactNumber, formatMoney, formatTrafficGb } from "$lib/webapp/formatters.js";
   import { buildSubscriptionQuotePath, type PostPayload } from "$lib/webapp/publicApi.js";
   import * as wataCheckout from "$lib/webapp/wataSubscriptionCheckout.js";
   import {
@@ -147,6 +147,29 @@
     device_count: checkoutDeviceCount,
     regular_limit_gb: checkoutRegularLimitGb,
     premium_limit_gb: checkoutPremiumLimitGb,
+  });
+  const checkoutOrderSummary = $derived.by(() => {
+    const plan = selectedPlan;
+    if (!plan) return null;
+    const days = Number(plan.duration_days || Number(plan.months || 0) * 30);
+    const devices =
+      Number(plan.effective_hwid_device_limit ?? plan.hwid_device_limit ?? 0) +
+      Number(checkoutAddonSelection.device_count || 0);
+    const traffic = checkoutAddonSelection.regular_limit_gb ?? plan.monthly_gb;
+    const premiumTraffic = checkoutAddonSelection.premium_limit_gb ?? plan.premium_monthly_gb;
+    const limitLabel = (value: unknown, unlimited: boolean) => {
+      if (unlimited || Number(value) <= 0) return t("wa_unlimited_traffic", {}, "Безлимит");
+      return formatTrafficGb(value);
+    };
+    return {
+      period: plan.subtitle || planSubtitleFn(plan, { t, termUnitLabel }) || String(days),
+      devices: devices > 0 ? String(devices) : t("wa_unlimited", {}, "Без ограничений"),
+      traffic: limitLabel(traffic, Number(traffic) <= 0),
+      premiumTraffic:
+        plan.premium_enabled === false && !plan.checkout_addons?.premium_traffic
+          ? t("wa_checkout_tariff_not_included", {}, "Не включён")
+          : limitLabel(premiumTraffic, Boolean(plan.premium_unlimited)),
+    };
   });
   function checkoutAddonDefinitions(
     plan: PlanView | null
@@ -369,7 +392,26 @@
     return withRenewal;
   }
   function planWithCheckoutSelection(plan: PlanView | null): PlanView | null {
-    return planWithSelectedHwidRenewal(planWithSelectedCheckoutAddons(plan));
+    const withSelection = planWithSelectedHwidRenewal(planWithSelectedCheckoutAddons(plan));
+    if (!withSelection) return withSelection;
+    const planCatalogEntry = plans.find(
+      (candidate) => String(candidate.id || "") === String(withSelection.id || "")
+    );
+    return planCatalogEntry
+      ? {
+          ...planCatalogEntry,
+          ...withSelection,
+          effective_hwid_device_limit:
+            planCatalogEntry.effective_hwid_device_limit ??
+            withSelection.effective_hwid_device_limit,
+          hwid_device_limit: planCatalogEntry.hwid_device_limit ?? withSelection.hwid_device_limit,
+          monthly_gb: planCatalogEntry.monthly_gb ?? withSelection.monthly_gb,
+          premium_enabled: planCatalogEntry.premium_enabled ?? withSelection.premium_enabled,
+          premium_monthly_gb:
+            planCatalogEntry.premium_monthly_gb ?? withSelection.premium_monthly_gb,
+          premium_unlimited: planCatalogEntry.premium_unlimited ?? withSelection.premium_unlimited,
+        }
+      : withSelection;
   }
   function paymentPriceLabel(plan: PlanView | null) {
     return priceLabelFn(planWithCheckoutSelection(plan), calculationMethod);
@@ -686,6 +728,7 @@
   function paymentTitle() {
     if (gift) return t("wa_gift_buy_title");
     if (isTrialPaymentPlan(selectedPlan)) return t("wa_trial_payment_title");
+    if (paymentStep === "checkout") return t("wa_checkout_step_payment", {}, "Оплата подписки");
     if (singleTariffMode) {
       return selectedTariff?.billing_model === "traffic"
         ? t("wa_traffic_packages_title")
@@ -697,6 +740,9 @@
   function paymentDescription() {
     if (gift) return "";
     if (isTrialPaymentPlan(selectedPlan)) return t("wa_trial_payment_description");
+    if (paymentStep === "checkout") {
+      return t("wa_zumvpn_payment_confirm", {}, "Проверьте выбранный тариф и завершите оплату.");
+    }
     if (tariffMode) {
       if (singleTariffMode) {
         return selectedTariff?.billing_model === "traffic"
@@ -783,7 +829,7 @@
     <CheckoutAddonSliders
       addons={checkoutAddonDefinitions(selectedPlan)}
       selection={checkoutAddonSelection}
-      plan={selectedPlan}
+      plan={planWithCheckoutSelection(selectedPlan)}
       tariffTitle={String(
         selectedTariff?.title || selectedPlan.tariff_name || selectedPlan.title || ""
       )}
@@ -797,6 +843,45 @@
       onChange={updateCheckoutAddon}
       onInteractionChange={handleCheckoutSliderInteraction}
     />
+  {/if}
+{/snippet}
+
+{#snippet orderSummary()}
+  {#if checkoutOrderSummary}
+    <section
+      class="zumvpn-payment-summary"
+      aria-label={t("wa_zumvpn_order_summary", {}, "Состав подписки")}
+    >
+      <div class="zumvpn-payment-summary-caption">
+        {t("wa_zumvpn_order_summary", {}, "Ваш тариф")}
+      </div>
+      <strong class="zumvpn-payment-plan-name">
+        {selectedTariff?.title ||
+          selectedPlan?.tariff_name ||
+          selectedPlan?.title ||
+          t("wa_subscription_title")}
+      </strong>
+      <div class="zumvpn-payment-summary-row">
+        <span>{t("wa_zumvpn_duration", {}, "Срок")}</span><strong
+          >{checkoutOrderSummary.period}</strong
+        >
+      </div>
+      <div class="zumvpn-payment-summary-row">
+        <span>{t("wa_checkout_addon_devices", {}, "Устройства")}</span><strong
+          >{checkoutOrderSummary.devices}</strong
+        >
+      </div>
+      <div class="zumvpn-payment-summary-row">
+        <span>{t("wa_checkout_addon_traffic", {}, "Трафик")}</span><strong
+          >{checkoutOrderSummary.traffic}</strong
+        >
+      </div>
+      <div class="zumvpn-payment-summary-row">
+        <span>{t("wa_checkout_addon_premium_traffic", {}, "Премиум-трафик")}</span><strong
+          >{checkoutOrderSummary.premiumTraffic}</strong
+        >
+      </div>
+    </section>
   {/if}
 {/snippet}
 
@@ -937,15 +1022,13 @@
         </p>
       {/if}
       {#if selectedTariffPlans.length}
-        {@render checkoutTariffCard()}
-        {@render checkoutPeriodOptions(selectedTariffPlans)}
+        {@render orderSummary()}
         {@render checkoutPaymentControls()}
       {:else}
         <EmptyCard>{t("wa_no_tariff_change_options")}</EmptyCard>
       {/if}
     {:else}
-      {@render checkoutTariffCard()}
-      {@render checkoutPeriodOptions(plans)}
+      {@render orderSummary()}
       {@render checkoutPaymentControls()}
     {/if}
   </div>

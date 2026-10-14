@@ -97,6 +97,58 @@ describe("createBillingModalActions", () => {
     expect(deps.billingStore.closeDeviceTopupModal).toHaveBeenCalledOnce();
   });
 
+  it("opens checkout for the nearest configured period and supported add-ons", () => {
+    const { actions, deps } = makeActions({
+      state: {
+        plans: [
+          {
+            id: "pro-30",
+            tariff_key: "pro",
+            duration_days: 30,
+            sale_mode: "subscription",
+            checkout_addons: {
+              devices: {
+                base_units: 1,
+                options: [{ extra_units: 0 }, { extra_units: 2 }],
+              },
+              traffic: {
+                base_units: 50,
+                options: [{ total_units: 50 }, { total_units: 100 }],
+              },
+            },
+          },
+          {
+            id: "pro-365",
+            tariff_key: "pro",
+            duration_days: 365,
+            sale_mode: "subscription",
+          },
+        ],
+      },
+    });
+
+    actions.openCustomizedPayment({ durationDays: 28, deviceTotal: 3, trafficGb: 100 });
+
+    expect(deps.billingStore.openPaymentModal).toHaveBeenCalledWith(
+      true,
+      false,
+      [{ key: "standard" }],
+      { active: false },
+      expect.any(Array),
+      "card",
+      expect.objectContaining({
+        preferredPlanId: "pro-30",
+        preferredTariffKey: "pro",
+        preferCheckout: true,
+        checkoutAddonPreset: {
+          deviceTotal: 2,
+          regularLimitGb: 100,
+          premiumLimitGb: null,
+        },
+      })
+    );
+  });
+
   it("passes the current device availability to device actions", () => {
     const { actions, deps, state } = makeActions();
 

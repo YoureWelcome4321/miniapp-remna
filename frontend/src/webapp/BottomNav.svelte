@@ -34,6 +34,7 @@
     onDevices?: Action;
     onHome?: Action;
     onInvite?: Action;
+    onSubscription?: Action;
     onPartner?: Action;
     partnerNavigationVisible?: boolean;
     partnerSettingsVisible?: boolean;
@@ -67,6 +68,7 @@
     onDevices = () => {},
     onHome = () => {},
     onInvite = () => {},
+    onSubscription = () => {},
     onPartner = () => {},
     partnerNavigationVisible = false,
     partnerSettingsVisible = false,
@@ -79,13 +81,22 @@
     t = (key) => key,
   }: Props = $props();
 
+  const zumvpnPrimaryNavigation = $derived(
+    screen === "home" ||
+      screen === "invite" ||
+      screen === "subscription" ||
+      screen === "support" ||
+      screen === "settings"
+  );
   const visibleNavItems = $derived(
-    2 +
-      extensionNavigation.length +
-      (bonusesNavigationVisible ? 1 : 0) +
-      (partnerNavigationVisible ? 1 : 0) +
-      (devicesEnabled ? 1 : 0) +
-      (supportEnabled ? 1 : 0)
+    zumvpnPrimaryNavigation
+      ? 3 + (supportEnabled ? 1 : 0) + 1
+      : 2 +
+          extensionNavigation.length +
+          (bonusesNavigationVisible ? 1 : 0) +
+          (partnerNavigationVisible ? 1 : 0) +
+          (devicesEnabled ? 1 : 0) +
+          (supportEnabled ? 1 : 0)
   );
   const adminLabel = $derived(t("wa_nav_admin", {}, "Admin panel"));
   const extensionIcons = {
@@ -113,8 +124,9 @@
 
 <nav
   class:bottom-nav-devices={devicesEnabled}
-  class:bottom-nav-many={visibleNavItems >= 5}
-  class:bottom-nav-scroll={visibleNavItems > 6}
+  class:bottom-nav-many={visibleNavItems >= 5 && !zumvpnPrimaryNavigation}
+  class:bottom-nav-scroll={visibleNavItems > 6 && !zumvpnPrimaryNavigation}
+  class:bottom-nav-zumvpn={zumvpnPrimaryNavigation}
   class="bottom-nav"
   style={`--bottom-nav-visible-items: ${visibleNavItems}`}
   aria-label={t("wa_navigation")}
@@ -123,139 +135,207 @@
     <BrandMark {brand} />
     <strong>{brandTitle}</strong>
   </div>
-  <button
-    data-nav-level="primary"
-    class:active={activeTab === "home"}
-    type="button"
-    aria-label={t("wa_nav_home")}
-    title={t("wa_nav_home")}
-    onclick={onHome}
-  >
-    <Home size={21} />
-    <span class="bottom-nav-label">{t("wa_nav_home")}</span>
-  </button>
-  {#if bonusesNavigationVisible}
+  {#if zumvpnPrimaryNavigation}
+    <button
+      data-nav-level="primary"
+      class:active={activeTab === "home"}
+      type="button"
+      aria-label={t("wa_nav_home")}
+      title={t("wa_nav_home")}
+      onclick={onHome}
+    >
+      <ShieldCheck size={21} />
+      <span class="bottom-nav-label">{t("wa_nav_home")}</span>
+    </button>
+    <button
+      data-nav-level="primary"
+      class:active={screen === "subscription"}
+      type="button"
+      aria-label={t("wa_zumvpn_nav_subscription", {}, "Подписка")}
+      title={t("wa_zumvpn_nav_subscription", {}, "Подписка")}
+      onclick={onSubscription}
+    >
+      <CreditCardCheck size={21} />
+      <span class="bottom-nav-label">{t("wa_zumvpn_nav_subscription", {}, "Подписка")}</span>
+    </button>
     <button
       data-nav-level="primary"
       class:active={activeTab === "invite"}
       type="button"
-      aria-label={t("wa_nav_bonuses")}
-      title={t("wa_nav_bonuses")}
+      aria-label={t("wa_zumvpn_nav_referrals", {}, "Рефералы")}
+      title={t("wa_zumvpn_nav_referrals", {}, "Рефералы")}
       onclick={onInvite}
     >
       <Gift size={21} />
-      <span class="bottom-nav-label">{t("wa_nav_bonuses")}</span>
+      <span class="bottom-nav-label">{t("wa_zumvpn_nav_referrals", {}, "Рефералы")}</span>
     </button>
-  {/if}
-  {#if partnerNavigationVisible}
+    {#if supportEnabled}
+      <button
+        data-nav-level="secondary"
+        class="attention-wrap"
+        class:active={screen === "support"}
+        type="button"
+        aria-label={t("wa_nav_support")}
+        title={t("wa_nav_support")}
+        onclick={onSupport}
+      >
+        {#if supportUnreadCount || (supportUnreadLoading && !supportUnreadLoaded)}
+          <AttentionDot class="nav-attention-dot" />
+        {/if}
+        <LifeBuoy size={19} />
+        <span class="bottom-nav-label">{t("wa_nav_support")}</span>
+      </button>
+    {/if}
     <button
-      data-nav-level="primary"
-      class:active={activeTab === "partner"}
-      type="button"
-      aria-label={t("wa_nav_partner")}
-      title={t("wa_nav_partner")}
-      onclick={onPartner}
-    >
-      <Handshake size={21} />
-      <span class="bottom-nav-label">{t("wa_nav_partner")}</span>
-    </button>
-  {/if}
-  {#if devicesEnabled}
-    <button
-      data-nav-level="primary"
-      class:active={activeTab === "devices"}
-      type="button"
-      aria-label={t("wa_nav_devices")}
-      title={t("wa_nav_devices")}
-      onclick={onDevices}
-    >
-      <Smartphone size={21} />
-      <span class="bottom-nav-label">{t("wa_nav_devices")}</span>
-    </button>
-  {/if}
-  {#if supportEnabled}
-    <button
-      data-nav-level="primary"
-      class:active={activeTab === "support"}
+      data-nav-level="secondary"
+      class:active={screen === "settings"}
       class="attention-wrap"
       type="button"
-      aria-label={t("wa_nav_support")}
-      title={t("wa_nav_support")}
-      onclick={onSupport}
+      aria-label={t("wa_nav_settings")}
+      title={t("wa_nav_settings")}
+      onclick={onSettings}
     >
-      {#if supportUnreadCount || (supportUnreadLoading && !supportUnreadLoaded)}
+      {#if hasUnlinkedIdentity}
         <AttentionDot class="nav-attention-dot" />
       {/if}
-      <LifeBuoy size={21} />
-      <span class="bottom-nav-label">{t("wa_nav_support")}</span>
+      <SettingsIcon size={19} />
+      <span class="bottom-nav-label">{t("wa_nav_settings")}</span>
     </button>
-  {/if}
-  <button
-    data-nav-level="primary"
-    class:active={activeTab === "settings"}
-    class="attention-wrap"
-    type="button"
-    aria-label={t("wa_nav_settings")}
-    title={t("wa_nav_settings")}
-    onclick={onSettings}
-  >
-    {#if hasUnlinkedIdentity}
-      <AttentionDot class="nav-attention-dot" />
-    {/if}
-    <SettingsIcon size={21} />
-    <span class="bottom-nav-label">{t("wa_nav_settings")}</span>
-  </button>
-  {#each extensionNavigation as item (item.id)}
-    {@const Icon = extensionIcons[item.icon as keyof typeof extensionIcons] || Star}
+  {:else}
     <button
       data-nav-level="primary"
-      class:active={screen === "extensions" && pathname === item.path}
+      class:active={activeTab === "home"}
       type="button"
-      onclick={() => navigateExtension(item.path)}
-      aria-label={item.label}
-      title={item.label}
+      aria-label={t("wa_nav_home")}
+      title={t("wa_nav_home")}
+      onclick={onHome}
     >
-      <Icon size={21} /><span class="bottom-nav-label">{item.label}</span>
+      <Home size={21} />
+      <span class="bottom-nav-label">{t("wa_nav_home")}</span>
     </button>
-  {/each}
-  <div class="rail-settings-subnav">
-    <button
-      data-webapp-action="open-payment-history"
-      class:active={screen === "payment-history"}
-      type="button"
-      onclick={onPaymentHistory}
-    >
-      <CreditCardCheck size={18} />
-      <span class="bottom-nav-label">{t("wa_payment_history_title")}</span>
-    </button>
-    <button class:active={screen === "notifications"} type="button" onclick={onNotifications}>
-      <Megaphone size={18} />
-      <span class="bottom-nav-label"
-        >{t("wa_notification_preferences_title", {}, "Notifications")}</span
+    {#if bonusesNavigationVisible}
+      <button
+        data-nav-level="primary"
+        class:active={activeTab === "invite"}
+        type="button"
+        aria-label={t("wa_nav_bonuses")}
+        title={t("wa_nav_bonuses")}
+        onclick={onInvite}
       >
-    </button>
-    <button class:active={screen === "security"} type="button" onclick={onSecurity}>
-      <ShieldCheck size={18} />
-      <span class="bottom-nav-label">{t("wa_security_title", {}, "Security")}</span>
-    </button>
-    {#if partnerSettingsVisible}
-      <button class:active={screen === "partner"} type="button" onclick={onPartner}>
-        <Handshake size={18} />
+        <Gift size={21} />
+        <span class="bottom-nav-label">{t("wa_nav_bonuses")}</span>
+      </button>
+    {/if}
+    {#if partnerNavigationVisible}
+      <button
+        data-nav-level="primary"
+        class:active={activeTab === "partner"}
+        type="button"
+        aria-label={t("wa_nav_partner")}
+        title={t("wa_nav_partner")}
+        onclick={onPartner}
+      >
+        <Handshake size={21} />
         <span class="bottom-nav-label">{t("wa_nav_partner")}</span>
       </button>
     {/if}
-  </div>
-  {#if isAdmin}
+    {#if devicesEnabled}
+      <button
+        data-nav-level="primary"
+        class:active={activeTab === "devices"}
+        type="button"
+        aria-label={t("wa_nav_devices")}
+        title={t("wa_nav_devices")}
+        onclick={onDevices}
+      >
+        <Smartphone size={21} />
+        <span class="bottom-nav-label">{t("wa_nav_devices")}</span>
+      </button>
+    {/if}
+    {#if supportEnabled}
+      <button
+        data-nav-level="primary"
+        class:active={activeTab === "support"}
+        class="attention-wrap"
+        type="button"
+        aria-label={t("wa_nav_support")}
+        title={t("wa_nav_support")}
+        onclick={onSupport}
+      >
+        {#if supportUnreadCount || (supportUnreadLoading && !supportUnreadLoaded)}
+          <AttentionDot class="nav-attention-dot" />
+        {/if}
+        <LifeBuoy size={21} />
+        <span class="bottom-nav-label">{t("wa_nav_support")}</span>
+      </button>
+    {/if}
     <button
       data-nav-level="primary"
-      class="rail-admin-entry"
+      class:active={activeTab === "settings"}
+      class="attention-wrap"
       type="button"
-      aria-label={adminLabel}
-      title={adminLabel}
-      onclick={onAdmin}
+      aria-label={t("wa_nav_settings")}
+      title={t("wa_nav_settings")}
+      onclick={onSettings}
     >
-      <Shield size={21} />
-      <span class="bottom-nav-label">{adminLabel}</span>
+      {#if hasUnlinkedIdentity}
+        <AttentionDot class="nav-attention-dot" />
+      {/if}
+      <SettingsIcon size={21} />
+      <span class="bottom-nav-label">{t("wa_nav_settings")}</span>
     </button>
+    {#each extensionNavigation as item (item.id)}
+      {@const Icon = extensionIcons[item.icon as keyof typeof extensionIcons] || Star}
+      <button
+        data-nav-level="primary"
+        class:active={screen === "extensions" && pathname === item.path}
+        type="button"
+        onclick={() => navigateExtension(item.path)}
+        aria-label={item.label}
+        title={item.label}
+      >
+        <Icon size={21} /><span class="bottom-nav-label">{item.label}</span>
+      </button>
+    {/each}
+    <div class="rail-settings-subnav">
+      <button
+        data-webapp-action="open-payment-history"
+        class:active={screen === "payment-history"}
+        type="button"
+        onclick={onPaymentHistory}
+      >
+        <CreditCardCheck size={18} />
+        <span class="bottom-nav-label">{t("wa_payment_history_title")}</span>
+      </button>
+      <button class:active={screen === "notifications"} type="button" onclick={onNotifications}>
+        <Megaphone size={18} />
+        <span class="bottom-nav-label"
+          >{t("wa_notification_preferences_title", {}, "Notifications")}</span
+        >
+      </button>
+      <button class:active={screen === "security"} type="button" onclick={onSecurity}>
+        <ShieldCheck size={18} />
+        <span class="bottom-nav-label">{t("wa_security_title", {}, "Security")}</span>
+      </button>
+      {#if partnerSettingsVisible}
+        <button class:active={screen === "partner"} type="button" onclick={onPartner}>
+          <Handshake size={18} />
+          <span class="bottom-nav-label">{t("wa_nav_partner")}</span>
+        </button>
+      {/if}
+    </div>
+    {#if isAdmin}
+      <button
+        data-nav-level="primary"
+        class="rail-admin-entry"
+        type="button"
+        aria-label={adminLabel}
+        title={adminLabel}
+        onclick={onAdmin}
+      >
+        <Shield size={21} />
+        <span class="bottom-nav-label">{adminLabel}</span>
+      </button>
+    {/if}
   {/if}
 </nav>

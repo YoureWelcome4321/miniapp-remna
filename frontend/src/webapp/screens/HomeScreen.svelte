@@ -1,6 +1,8 @@
 <script lang="ts">
   import ThemeEffectSurface from "../ThemeEffectSurface.svelte";
   import UserExtensionPoint from "../extensions/UserExtensionPoint.svelte";
+  import type { ApiClient } from "$lib/webapp/publicApi.js";
+  import { buildSubscriptionQuotePath, type PostPayload } from "$lib/webapp/publicApi.js";
   import { onMount } from "svelte";
   import { slide } from "svelte/transition";
   import {
@@ -15,10 +17,11 @@
     Send,
   } from "$components/ui/icons.js";
 
-  import BrandMark from "$lib/webapp/BrandMark.svelte";
   import { AttentionDot } from "$components/ui/index.js";
   import Button from "$components/ui/button.svelte";
   import Card from "$components/ui/card.svelte";
+  import Dialog from "$components/ui/dialog.svelte";
+  import RangeInput from "$components/ui/range-input.svelte";
   import TelegramNotificationsBanner from "../TelegramNotificationsBanner.svelte";
   import ServerStatusCard from "../ServerStatusCard.svelte";
   import HomeCompactSummaryCard from "../HomeCompactSummaryCard.svelte";
@@ -50,9 +53,10 @@
   import type {
     AppSettings,
     BalanceView,
+    PlanView,
     BooleanAction,
-    BrandConfig,
     ReferralState,
+    CopyTextAction,
     SubscriptionView,
     TermUnitLabel,
     Translate,
@@ -69,16 +73,18 @@
   const COUNTDOWN_IDLE_REFRESH_MS = 60_000;
 
   let {
+    apiClient,
     appSettings = {},
+    plans = [],
     balance = {} as BalanceView,
-    brand = {},
-    brandTitle = "",
     canChangeTariff = false,
     premiumTrafficTopupBarClickable = false,
     premiumTrafficTopupUnlocked = false,
     regularTrafficTopupBarClickable = false,
     regularTrafficTopupUnlocked = false,
     referral = {},
+    copyText = async () => {},
+    openCustomizedPayment = () => openPaymentModal(),
     currentTariffName = "",
     hasActiveTariffSubscription = false,
     hasMultipleTariffs = false,
@@ -105,6 +111,7 @@
     goSecurity = () => {},
     goStatus = () => {},
     openExternalLink = () => {},
+    requiredChannelUrl = "",
     serverStatusShowOnHome = false,
     compactHomeEnabled = false,
     homeElementVisibility = DEFAULT_HOME_ELEMENT_VISIBILITY,
@@ -112,16 +119,22 @@
     primaryPayActionLabel = () => "",
     t = (key) => key,
   }: {
+    apiClient?: ApiClient;
     appSettings?: AppSettings;
+    plans?: PlanView[];
     balance?: BalanceView;
-    brand?: BrandConfig;
-    brandTitle?: string;
     canChangeTariff?: boolean;
     premiumTrafficTopupBarClickable?: boolean;
     premiumTrafficTopupUnlocked?: boolean;
     regularTrafficTopupBarClickable?: boolean;
     regularTrafficTopupUnlocked?: boolean;
     referral?: ReferralState;
+    copyText?: CopyTextAction;
+    openCustomizedPayment?: (options: {
+      durationDays: number;
+      deviceTotal: number;
+      trafficGb: number | null;
+    }) => void;
     currentTariffName?: string;
     hasActiveTariffSubscription?: boolean;
     hasMultipleTariffs?: boolean;
@@ -148,6 +161,7 @@
     goSecurity?: VoidAction;
     goStatus?: VoidAction;
     openExternalLink?: OpenLinkAction;
+    requiredChannelUrl?: string;
     serverStatusShowOnHome?: boolean;
     compactHomeEnabled?: boolean;
     homeElementVisibility?: HomeElementVisibility;
@@ -163,6 +177,23 @@
   let nowMs = $state(Date.now());
   let regularTrafficResetOpen = $state(false);
   let premiumTrafficResetOpen = $state(false);
+  let trialConfirmOpen = $state(false);
+  let builderOpen = $state(false);
+  let builderDuration = $state(30);
+  let builderDevices = $state(1);
+  let builderTrafficMode = $state<"limited" | "unlimited">("limited");
+  let builderTrafficGb = $state(100);
+  let builderPreset = $state("start");
+  let builderQuote = $state<Record<string, unknown> | null>(null);
+  let builderQuoteBusy = $state(false);
+  let builderQuoteError = $state("");
+  let builderRequestId = 0;
+
+  const BUILDER_PRESETS = {
+    start: { duration: 30, devices: 1, trafficMode: "limited" as const, trafficGb: 100 },
+    everyday: { duration: 30, devices: 3, trafficMode: "unlimited" as const, trafficGb: 300 },
+    max: { duration: 365, devices: 10, trafficMode: "unlimited" as const, trafficGb: 300 },
+  };
 
   function trafficPercent(sub: SubscriptionView) {
     return trafficPercentFn(sub);
@@ -239,6 +270,126 @@
       unit: termUnitLabel(days, "day"),
     });
   }
+  const builderQuotePlan = $derived.by(() => {
+    const available = plans;
+    const availableDays = available.filter((plan) => plan.duration_days != null);
+    const exactDays = availableDays
+      .filter((plan) => String(plan.sale_mode || "subscription") === "subscription")
+      .slice()
+      .sort(
+        (a, b) =>
+          Math.abs(Number(a.duration_days) - builderDuration) -
+          Math.abs(Number(b.duration_days) - builderDuration)
+      )[0];
+    const monthPlans = available
+      .filter(
+        (plan) =>
+          plan.duration_days == null && String(plan.sale_mode || "subscription") === "subscription"
+      )
+      .slice()
+      .sort(
+        (a, b) =>
+          Math.abs(Number(a.months || 0) * 30 - builderDuration) -
+          Math.abs(Number(b.months || 0) * 30 - builderDuration)
+      )[0];
+    return exactDays || monthPlans || null;
+  });
+  const builderPrice = $derived(Number(builderQuote?.effective_amount ?? 0));
+  const builderSupportedDevices = $derived(
+    Boolean(
+      builderQuotePlan?.checkout_addons?.devices?.options?.some(
+        (option) => Number(option.extra_units) === builderDevices
+      )
+    ) || Number(builderQuotePlan?.checkout_addons?.devices?.base_units || 1) === builderDevices
+  );
+  const builderSupportedTraffic = $derived(
+    builderTrafficMode === "unlimited"
+      ? Boolean(
+          builderQuotePlan?.premium_unlimited || builderQuotePlan?.checkout_addons?.premium_traffic
+        )
+      : Boolean(
+          builderQuotePlan?.checkout_addons?.traffic?.options?.some(
+            (option) => Number(option.total_units) === builderTrafficGb
+          )
+        ) ||
+          Number(builderQuotePlan?.checkout_addons?.traffic?.base_units || 0) === builderTrafficGb
+  );
+  const builderQuoteMethod = $derived(
+    String(builderQuotePlan?.available_payment_method_ids?.[0] || "")
+  );
+
+  function selectBuilderPreset(key: keyof typeof BUILDER_PRESETS) {
+    const preset = BUILDER_PRESETS[key];
+    builderPreset = key;
+    builderDuration = preset.duration;
+    builderDevices = preset.devices;
+    builderTrafficMode = preset.trafficMode;
+    builderTrafficGb = preset.trafficGb;
+  }
+
+  function openPlanBuilder() {
+    builderOpen = true;
+    selectBuilderPreset("start");
+  }
+
+  function continueWithBuiltPlan() {
+    openCustomizedPayment({
+      durationDays: builderDuration,
+      deviceTotal: builderDevices,
+      trafficGb: builderTrafficMode === "limited" ? builderTrafficGb : null,
+    });
+    builderOpen = false;
+  }
+
+  $effect(() => {
+    if (!builderOpen || !builderQuotePlan) return;
+    const client = apiClient;
+    if (!client) return;
+    const plan = builderQuotePlan;
+    const devices = builderDevices;
+    const trafficMode = builderTrafficMode;
+    const traffic = builderTrafficGb;
+    const requestId = ++builderRequestId;
+    builderQuoteBusy = true;
+    builderQuote = null;
+    builderQuoteError = "";
+    const timer = window.setTimeout(() => {
+      void client
+        .api(buildSubscriptionQuotePath(), {
+          method: "POST",
+          body: JSON.stringify({
+            duration_days: plan.duration_days ? Number(plan.duration_days) : null,
+            months: plan.months ? Number(plan.months) : null,
+            checkout_addons: {
+              device_count: Math.max(0, devices - Number(plan.effective_hwid_device_limit || 1)),
+              regular_limit_gb: trafficMode === "limited" ? traffic : null,
+              premium_limit_gb: null,
+            },
+            tariff_key: plan.tariff_key || null,
+            sale_mode: plan.sale_mode || "subscription",
+            method: builderQuoteMethod,
+            renew_hwid_devices: false,
+          } as PostPayload<"/api/subscription/quote">),
+        })
+        .then((response) => {
+          if (requestId === builderRequestId) builderQuote = response as Record<string, unknown>;
+        })
+        .catch(() => {
+          if (requestId === builderRequestId) {
+            builderQuote = null;
+            builderQuoteError = t(
+              "wa_checkout_quote_failed",
+              {},
+              "Не удалось рассчитать стоимость"
+            );
+          }
+        })
+        .finally(() => {
+          if (requestId === builderRequestId) builderQuoteBusy = false;
+        });
+    }, 280);
+    return () => window.clearTimeout(timer);
+  });
   function parseSubscriptionEndMs(sub: SubscriptionView) {
     const raw = String(sub?.end_date || "").trim();
     if (!raw) return null;
@@ -270,6 +421,7 @@
     Boolean(!subscription?.active && appSettings?.trial_enabled && appSettings?.trial_available)
   );
   const trialPaymentEnabled = $derived(Boolean(appSettings?.trial_payment_enabled));
+  const trialChannelConfigured = $derived(Boolean(requiredChannelUrl.trim()));
   const trialRequiresOauth = $derived(
     Boolean(
       !subscription?.active && appSettings?.trial_enabled && appSettings?.trial_requires_oauth
@@ -339,6 +491,19 @@
       .filter(Boolean)
       .join(" ")
   );
+  const subscriptionDaysLeft = $derived(Math.max(0, Number(subscription?.days_left || 0)));
+  const subscriptionProgress = $derived.by(() => {
+    const end = Date.parse(String(subscription?.end_date || ""));
+    const start = Date.parse(String(subscription?.period_start_at || ""));
+    if (!Number.isFinite(end) || !Number.isFinite(start) || end <= start) return 0;
+    return Math.max(0, Math.min(100, ((Date.now() - start) / (end - start)) * 100));
+  });
+  const homeSubscriptionStatus = $derived(
+    subscription.active
+      ? t("wa_zumvpn_subscription_active", {}, "Подписка активна")
+      : t("wa_zumvpn_subscription_inactive", {}, "Подписка не активна")
+  );
+  const accountLabel = $derived(t("wa_zumvpn_account_label", {}, "Telegram-пользователь"));
   const autoRenewVisible = $derived(
     Boolean(subscription?.active && subscription?.auto_renew_available)
   );
@@ -441,14 +606,114 @@
   });
 </script>
 
-<main class="home-layout">
-  <div class="login-brand home-brand" style="position:relative;isolation:isolate">
-    <ThemeEffectSurface name="home.header.surface" />
-    <div class="home-logo-slot">
-      <BrandMark {brand} size="xl" />
+{#snippet trialOfferCard()}
+  <Card class="trial-card trial-offer-card">
+    <div class="trial-card-head">
+      <Gift size={22} />
+      <span>
+        <strong>{t("wa_trial_offer_title", {}, "Start with a grace period")}</strong>
+        <small>{t("wa_trial_title")}</small>
+      </span>
     </div>
-    <h1>{brandTitle}</h1>
+    <p class="trial-card-description">
+      {trialPaymentEnabled
+        ? t(
+            "wa_trial_offer_paid_description",
+            { duration: trialDurationLabel(), traffic: trialTrafficLabel() },
+            "Pay once to activate {duration} of trial access with {traffic}."
+          )
+        : t(
+            "wa_trial_offer_description",
+            { duration: trialDurationLabel(), traffic: trialTrafficLabel() },
+            "Activate a trial: {duration} of access and {traffic} available to download for free."
+          )}
+    </p>
+    <div class="trial-card-facts">
+      <span>
+        <small>{t("wa_trial_duration_label", {}, "Duration")}</small>
+        <strong>{trialDurationLabel()}</strong>
+      </span>
+      <span>
+        <small>{t("wa_trial_download_traffic_label", {}, "Available to download")}</small>
+        <strong>{trialTrafficLabel()}</strong>
+      </span>
+    </div>
+    <Button
+      class="wide trial-card-action"
+      onclick={() => (trialConfirmOpen = true)}
+      disabled={trialBusy}
+    >
+      <Gift size={18} />
+      {trialPaymentEnabled
+        ? t("wa_trial_pay_and_activate", {}, "Pay and activate")
+        : t("wa_trial_try_free", {}, "Try for free")}
+    </Button>
+  </Card>
+{/snippet}
+
+<main class="home-layout zumvpn-home-layout">
+  <div class="zumvpn-home-top">
+    <div
+      class="zumvpn-connection-circle"
+      class:active={subscription.active}
+      class:inactive={!subscription.active}
+      aria-label={homeSubscriptionStatus}
+    >
+      <svg
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path d="M12 2 4 5v6c0 5.2 3.5 9.7 8 11 4.5-1.3 8-5.8 8-11V5l-8-3Z" />
+      </svg>
+    </div>
+    <div
+      class="zumvpn-connection-status"
+      class:active={subscription.active}
+      class:inactive={!subscription.active}
+    >
+      {homeSubscriptionStatus}
+    </div>
+    <button class="zumvpn-instruction-card" type="button" onclick={openConnectLink}>
+      <span class="zumvpn-instruction-icon" aria-hidden="true">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          ><path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+          /></svg
+        >
+      </span>
+      <span class="zumvpn-instruction-copy">
+        <strong>{t("wa_zumvpn_connect_guide", {}, "Инструкция по подключению")}</strong>
+        <small>{t("wa_zumvpn_recommended_apps", {}, "Рекомендуем Happ и Incy")}</small>
+      </span>
+      <svg
+        class="zumvpn-chevron"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        ><path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="m9 5 7 7-7 7"
+        /></svg
+      >
+    </button>
   </div>
+
+  {#if !compactHomeEnabled && showHomeBalance}
+    <UserExtensionPoint target="user.home.balance">
+      <HomeBalanceCard {balance} {openBalanceTopup} {t} />
+    </UserExtensionPoint>
+  {/if}
 
   {#if telegramNotificationsNeedPrompt}
     <TelegramNotificationsBanner
@@ -459,7 +724,74 @@
     />
   {/if}
 
-  <div class="home-bottom">
+  <div class="home-bottom zumvpn-home-bottom">
+    {#if trialOfferAvailable}
+      {@render trialOfferCard()}
+    {:else}
+      <Card class="zumvpn-subscription-card" style="position:relative;isolation:isolate">
+        <ThemeEffectSurface name="home.card.surface" />
+        <div class="zumvpn-subscription-header">
+          <h2>{t("wa_zumvpn_your_subscription", {}, "Ваша подписка")}</h2>
+          <span class="zumvpn-subscription-status" class:inactive={!subscription.active}
+            >{homeSubscriptionStatus}</span
+          >
+        </div>
+        <div class="zumvpn-subscription-account">{accountLabel}</div>
+        <div class="zumvpn-subscription-time">
+          <div class="zumvpn-time-header">
+            <div class="zumvpn-time-remaining">
+              <strong>{subscription.active ? subscriptionDaysLeft : 0}</strong>
+              <span>{t("wa_zumvpn_days_left", {}, "дней осталось")}</span>
+            </div>
+            <span class="zumvpn-time-end"
+              >{subscription.active
+                ? subscription.end_date_text || subscription.remaining_text
+                : t("wa_zumvpn_no_active_subscription", {}, "Нет активной подписки")}</span
+            >
+          </div>
+          <div class="zumvpn-progress-track">
+            <span style={`width:${subscriptionProgress}%`}></span>
+          </div>
+        </div>
+        <div class="zumvpn-subscription-link">
+          <span class="zumvpn-subscription-caption">
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              ><path d="M10 13a5 5 0 0 0 7.07 0l3-3A5 5 0 0 0 13 2.93l-1.72 1.72" /><path
+                d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21.07l1.72-1.72"
+              /></svg
+            >
+            VPN · {t("wa_zumvpn_subscription_link", {}, "Ссылка подписки")}
+          </span>
+          <span class="zumvpn-subscription-url"
+            >{subscription.connect_url ||
+              subscription.config_link ||
+              t("wa_link_unavailable", {}, "Ссылка пока недоступна")}</span
+          >
+          <Button
+            class="zumvpn-copy-button"
+            variant="secondary"
+            onclick={() =>
+              copyText(
+                String(subscription.connect_url || subscription.config_link),
+                t("wa_link_copied")
+              )}
+            disabled={!subscription.connect_url && !subscription.config_link}
+          >
+            {t("wa_copy", {}, "Копировать")}
+          </Button>
+        </div>
+        <Button class="wide zumvpn-manage-button" variant="secondary" onclick={openPaymentModal}>
+          {t("wa_zumvpn_manage_subscription", {}, "Управлять подпиской")}
+        </Button>
+      </Card>
+    {/if}
     {#if compactHomeEnabled}
       <UserExtensionPoint target="user.home.summary">
         <HomeCompactSummaryCard
@@ -494,93 +826,86 @@
         />
       </UserExtensionPoint>
     {:else}
-      {#if showHomeBalance}
-        <UserExtensionPoint target="user.home.balance">
-          <HomeBalanceCard {balance} {openBalanceTopup} {t} />
-        </UserExtensionPoint>
-      {/if}
-
-      <UserExtensionPoint target="user.home.subscription">
-        <Card class={statusCardClass} style="position:relative;isolation:isolate">
-          <ThemeEffectSurface name="home.card.surface" />
-          {#if subscription.active}
-            <div class="sub-status">
-              <CheckCircle2 class="sub-status-icon" size={23} />
-              <div class="sub-status-main">
-                <h2>
-                  {trafficMode ? t("wa_home_access_active") : t("wa_home_subscription_active")}
-                  {#if showSubscriptionPeriod}
-                    <span class="meta-separator" aria-hidden="true"></span>
-                    {subscriptionTermDisplayText}
+      {#if subscription.active}
+        <UserExtensionPoint target="user.home.subscription">
+          <Card class={statusCardClass} style="position:relative;isolation:isolate">
+            <ThemeEffectSurface name="home.card.surface" />
+            {#if subscription.active}
+              <div class="sub-status">
+                <CheckCircle2 class="sub-status-icon" size={23} />
+                <div class="sub-status-main">
+                  <h2>
+                    {trafficMode ? t("wa_home_access_active") : t("wa_home_subscription_active")}
+                    {#if showSubscriptionPeriod}
+                      <span class="meta-separator" aria-hidden="true"></span>
+                      {subscriptionTermDisplayText}
+                    {/if}
+                  </h2>
+                  {#if showTariffName || showSubscriptionEnd}
+                    <div
+                      class:sub-status-details-with-tariff={showTariffName && showSubscriptionEnd}
+                      class="sub-status-details"
+                    >
+                      {#if showTariffName}
+                        <p class="current-tariff-line">
+                          {t("wa_current_tariff", { tariff: currentTariffName })}
+                        </p>
+                      {/if}
+                      {#if showSubscriptionEnd}
+                        <p class="subscription-end-line">
+                          {subscriptionEndDisplayText
+                            ? t("wa_until_date", { date: subscriptionEndDisplayText })
+                            : subscription.remaining_text}
+                        </p>
+                      {/if}
+                    </div>
                   {/if}
-                </h2>
-                {#if showTariffName || showSubscriptionEnd}
-                  <div
-                    class:sub-status-details-with-tariff={showTariffName && showSubscriptionEnd}
-                    class="sub-status-details"
+                </div>
+                {#if showChangeTariff}
+                  <Button
+                    data-webapp-action="open-tariff-change"
+                    class="status-tariff-action"
+                    variant="secondary"
+                    onclick={openTariffChangeModal}
                   >
-                    {#if showTariffName}
-                      <p class="current-tariff-line">
-                        {t("wa_current_tariff", { tariff: currentTariffName })}
-                      </p>
-                    {/if}
-                    {#if showSubscriptionEnd}
-                      <p class="subscription-end-line">
-                        {subscriptionEndDisplayText
-                          ? t("wa_until_date", { date: subscriptionEndDisplayText })
-                          : subscription.remaining_text}
-                      </p>
-                    {/if}
-                  </div>
+                    <Repeat2 size={17} />
+                    {t("wa_change_tariff")}
+                  </Button>
                 {/if}
               </div>
-              {#if showChangeTariff}
-                <Button
-                  data-webapp-action="open-tariff-change"
-                  class="status-tariff-action"
-                  variant="secondary"
-                  onclick={openTariffChangeModal}
-                >
-                  <Repeat2 size={17} />
-                  {t("wa_change_tariff")}
-                </Button>
-              {/if}
-            </div>
-            {#if showAutoRenew}
-              <div class="auto-renew-row">
-                <div class="auto-renew-state">
-                  <Repeat2 size={17} />
-                  <span>
-                    <strong>
-                      {autoRenewEnabled ? t("wa_auto_renew_enabled") : t("wa_auto_renew_disabled")}
-                    </strong>
-                  </span>
-                </div>
-                <Button
-                  class="auto-renew-action"
-                  variant="secondary"
-                  onclick={() => toggleAutoRenew(!autoRenewEnabled)}
-                  disabled={autoRenewBusy ||
-                    (!autoRenewEnabled && !subscription?.auto_renew_can_enable)}
-                >
-                  {#if autoRenewEnabled}
-                    <CircleX size={17} />
-                    {t("wa_auto_renew_disable")}
-                  {:else}
+              {#if showAutoRenew}
+                <div class="auto-renew-row">
+                  <div class="auto-renew-state">
                     <Repeat2 size={17} />
-                    {t("wa_auto_renew_enable")}
-                  {/if}
-                </Button>
-              </div>
+                    <span>
+                      <strong>
+                        {autoRenewEnabled
+                          ? t("wa_auto_renew_enabled")
+                          : t("wa_auto_renew_disabled")}
+                      </strong>
+                    </span>
+                  </div>
+                  <Button
+                    class="auto-renew-action"
+                    variant="secondary"
+                    onclick={() => toggleAutoRenew(!autoRenewEnabled)}
+                    disabled={autoRenewBusy ||
+                      (!autoRenewEnabled && !subscription?.auto_renew_can_enable)}
+                  >
+                    {#if autoRenewEnabled}
+                      <CircleX size={17} />
+                      {t("wa_auto_renew_disable")}
+                    {:else}
+                      <Repeat2 size={17} />
+                      {t("wa_auto_renew_enable")}
+                    {/if}
+                  </Button>
+                </div>
+              {/if}
             {/if}
-          {:else}
-            <div class="sub-status sub-status-inactive">
-              <CircleX class="sub-status-icon" size={23} />
-              <h2>{t("wa_home_subscription_inactive")}</h2>
-            </div>
-          {/if}
-        </Card>
-      </UserExtensionPoint>
+          </Card>
+        </UserExtensionPoint>
+      {/if}
     {/if}
 
     {#if subscription.active}
@@ -769,46 +1094,7 @@
         </Card>
       {/if}
 
-      {#if trialOfferAvailable}
-        <Card class="trial-card trial-offer-card">
-          <div class="trial-card-head">
-            <Gift size={22} />
-            <span>
-              <strong>{t("wa_trial_offer_title", {}, "Start with a grace period")}</strong>
-              <small>{t("wa_trial_title")}</small>
-            </span>
-          </div>
-          <p class="trial-card-description">
-            {trialPaymentEnabled
-              ? t(
-                  "wa_trial_offer_paid_description",
-                  { duration: trialDurationLabel(), traffic: trialTrafficLabel() },
-                  "Pay once to activate {duration} of trial access with {traffic}."
-                )
-              : t(
-                  "wa_trial_offer_description",
-                  { duration: trialDurationLabel(), traffic: trialTrafficLabel() },
-                  "Activate a trial: {duration} of access and {traffic} available to download for free."
-                )}
-          </p>
-          <div class="trial-card-facts">
-            <span>
-              <small>{t("wa_trial_duration_label", {}, "Duration")}</small>
-              <strong>{trialDurationLabel()}</strong>
-            </span>
-            <span>
-              <small>{t("wa_trial_download_traffic_label", {}, "Available to download")}</small>
-              <strong>{trialTrafficLabel()}</strong>
-            </span>
-          </div>
-          <Button class="wide trial-card-action" onclick={activateTrial} disabled={trialBusy}>
-            <Gift size={18} />
-            {trialPaymentEnabled
-              ? t("wa_trial_pay_and_activate", {}, "Pay and activate")
-              : t("wa_trial_try_free", {}, "Try for free")}
-          </Button>
-        </Card>
-      {:else if trialRequiresOauth}
+      {#if trialRequiresOauth}
         <Card class="trial-card trial-offer-card">
           <div class="trial-card-head">
             <Gift size={22} />
@@ -865,32 +1151,41 @@
       {/if}
     {/if}
 
+    {#if !trialOfferAvailable}
+      <Button class="wide zumvpn-builder-entry" variant="secondary" onclick={openPlanBuilder}>
+        <CreditCard size={18} />
+        {t("wa_zumvpn_build_plan", {}, "Собрать свой тариф")}
+      </Button>
+    {/if}
+
     {#if serverStatusShowOnHome}
       <UserExtensionPoint target="user.home.status">
         <ServerStatusCard {statusStore} {goStatus} {openExternalLink} {t} />
       </UserExtensionPoint>
     {/if}
 
-    <div class="action-stack">
+    <div class="action-stack zumvpn-action-stack">
       {#if subscription.active}
         <Button class="wide" onclick={openConnectLink}>
           <Download size={18} />
           {t("wa_install_and_configure")}
         </Button>
       {/if}
-      <Button
-        data-webapp-action="open-payment"
-        class={`wide${subscription.active ? " subscription-renew-action" : ""}`}
-        variant={subscription.active ? "secondary" : "default"}
-        onclick={openPaymentModal}
-      >
-        {#if subscription.active}
-          <CreditCard size={18} />
-        {:else if trafficMode}
-          <Database size={18} />
-        {/if}
-        {primaryPayActionLabel()}
-      </Button>
+      {#if !trialOfferAvailable}
+        <Button
+          data-webapp-action="open-payment"
+          class={`wide${subscription.active ? " subscription-renew-action" : ""}`}
+          variant={subscription.active ? "secondary" : "default"}
+          onclick={openPaymentModal}
+        >
+          {#if subscription.active}
+            <CreditCard size={18} />
+          {:else if trafficMode}
+            <Database size={18} />
+          {/if}
+          {primaryPayActionLabel()}
+        </Button>
+      {/if}
       {#if regularTrafficTopupUnlocked && regularTrafficLimitVisible(subscription)}
         <Button
           data-webapp-action="open-regular-topup"
@@ -916,6 +1211,187 @@
     </div>
   </div>
 </main>
+
+<Dialog
+  open={trialConfirmOpen}
+  title={t("wa_trial_offer_title", {}, "Бесплатный пробный период")}
+  description={t(
+    "wa_zumvpn_trial_confirm_description",
+    { duration: trialDurationLabel(), traffic: trialTrafficLabel() },
+    "Перед активацией проверьте условия пробного доступа."
+  )}
+  closeLabel={t("wa_close")}
+  onclose={() => (trialConfirmOpen = false)}
+  class="zumvpn-trial-confirm-dialog"
+>
+  <div class="zumvpn-trial-confirm-facts">
+    <div>
+      <small>{t("wa_trial_duration_label", {}, "Срок")}</small><strong
+        >{trialDurationLabel()}</strong
+      >
+    </div>
+    <div>
+      <small>{t("wa_trial_download_traffic_label", {}, "Доступно для скачивания")}</small><strong
+        >{trialTrafficLabel()}</strong
+      >
+    </div>
+  </div>
+  <div class="zumvpn-trial-channel-note">
+    <Gift size={20} />
+    <p>
+      {trialChannelConfigured
+        ? t(
+            "wa_zumvpn_trial_channel_note",
+            {},
+            "Для получения доступа необходимо подписаться на канал проекта в Telegram. После подписки нажмите «Активировать»."
+          )
+        : t(
+            "wa_zumvpn_trial_channel_unconfigured",
+            {},
+            "Для получения доступа нужна подписка на Telegram-канал. Ссылка на канал пока не настроена, поэтому активировать пробный доступ сейчас нельзя."
+          )}
+    </p>
+  </div>
+  <div class="zumvpn-trial-confirm-actions">
+    {#if requiredChannelUrl}
+      <Button class="wide" onclick={() => openExternalLink(requiredChannelUrl)}>
+        {t("wa_zumvpn_open_channel", {}, "Подписаться на канал")}
+      </Button>
+      <Button
+        class="wide"
+        variant="secondary"
+        onclick={() => {
+          trialConfirmOpen = false;
+          activateTrial();
+        }}
+        disabled={trialBusy}
+      >
+        {trialBusy ? t("wa_loading") : t("wa_trial_try_free", {}, "Активировать пробный период")}
+      </Button>
+    {:else}
+      <Button class="wide" variant="secondary" onclick={() => (trialConfirmOpen = false)}>
+        {t("wa_close", {}, "Закрыть")}
+      </Button>
+    {/if}
+  </div>
+</Dialog>
+
+<Dialog
+  open={builderOpen}
+  title={t("wa_zumvpn_builder_title", {}, "Соберите свой тариф")}
+  description={t("wa_zumvpn_builder_description", {}, "Настройте подписку под себя")}
+  closeLabel={t("wa_close")}
+  onclose={() => (builderOpen = false)}
+  class="zumvpn-plan-builder-dialog"
+  scrollType="scroll"
+>
+  <div class="zumvpn-builder-presets">
+    {#each Object.entries(BUILDER_PRESETS) as [key, preset]}
+      <button
+        class:selected={builderPreset === key}
+        type="button"
+        onclick={() => selectBuilderPreset(key as keyof typeof BUILDER_PRESETS)}
+      >
+        <strong
+          >{t(
+            `wa_zumvpn_preset_${key}`,
+            {},
+            key === "start" ? "Старт" : key === "everyday" ? "Каждый день" : "Максимум"
+          )}</strong
+        >
+        <small
+          >{preset.duration}
+          {t("wa_zumvpn_days", {}, "дней")} · {preset.devices}
+          {t("wa_devices_title", {}, "устройства")}</small
+        >
+      </button>
+    {/each}
+  </div>
+  <section class="zumvpn-builder-section">
+    <label
+      ><span>{t("wa_zumvpn_duration", {}, "Срок подписки")}</span><output
+        >{builderDuration} {t("wa_zumvpn_days", {}, "дней")}</output
+      >
+      <RangeInput
+        min="1"
+        max="730"
+        step="1"
+        bind:value={builderDuration}
+        onValueChange={() => (builderPreset = "custom")}
+        ariaLabel={t("wa_zumvpn_duration", {}, "Срок подписки")}
+      />
+    </label>
+    <label
+      ><span>{t("wa_zumvpn_devices", {}, "Устройства")}</span><output>{builderDevices}</output>
+      <RangeInput
+        min="1"
+        max="10"
+        step="1"
+        bind:value={builderDevices}
+        onValueChange={() => (builderPreset = "custom")}
+        ariaLabel={t("wa_zumvpn_devices", {}, "Устройства")}
+      />
+    </label>
+    <div class="zumvpn-builder-traffic">
+      <strong>{t("wa_zumvpn_traffic", {}, "Трафик")}</strong>
+      <div>
+        <Button
+          variant={builderTrafficMode === "unlimited" ? "default" : "secondary"}
+          onclick={() => {
+            builderTrafficMode = "unlimited";
+            builderPreset = "custom";
+          }}>{t("wa_zumvpn_unlimited", {}, "∞ Безлимит")}</Button
+        >
+        <Button
+          variant={builderTrafficMode === "limited" ? "default" : "secondary"}
+          onclick={() => {
+            builderTrafficMode = "limited";
+            builderPreset = "custom";
+          }}>{t("wa_zumvpn_by_volume", {}, "По объёму")}</Button
+        >
+      </div>
+      {#if builderTrafficMode === "limited"}
+        <label
+          ><span>{t("wa_zumvpn_traffic_limit", {}, "Лимит трафика")}</span><output
+            >{builderTrafficGb} GB</output
+          >
+          <RangeInput
+            min="1"
+            max="300"
+            step="1"
+            bind:value={builderTrafficGb}
+            onValueChange={() => (builderPreset = "custom")}
+            ariaLabel={t("wa_zumvpn_traffic_limit", {}, "Лимит трафика")}
+          />
+        </label>
+      {/if}
+    </div>
+  </section>
+  <section class="zumvpn-builder-quote" aria-live="polite">
+    <div>
+      <span>{t("wa_zumvpn_total", {}, "Стоимость выбранного тарифа")}</span><strong
+        >{builderQuoteBusy
+          ? t("wa_loading")
+          : builderPrice > 0
+            ? `${builderPrice} ${builderQuote?.currency || builderQuotePlan?.currency || "RUB"}`
+            : builderQuoteError ||
+              t("wa_zumvpn_checkout_confirms_price", {}, "Точную цену подтвердит checkout")}</strong
+      >
+    </div>
+    {#if !builderSupportedDevices || !builderSupportedTraffic}
+      <p class="zumvpn-builder-limits">
+        {t(
+          "wa_zumvpn_builder_supported_values",
+          {},
+          "Часть выбранных параметров недоступна в текущей настройке тарифов. На оплате будут доступны только настроенные варианты."
+        )}
+      </p>
+    {/if}
+    <Button class="wide" onclick={continueWithBuiltPlan}
+      >{t("wa_checkout_continue", {}, "Продолжить к оплате")}</Button
+    >
+  </section>
+</Dialog>
 
 <style>
   :global(.home-bottom > section.status-card) {

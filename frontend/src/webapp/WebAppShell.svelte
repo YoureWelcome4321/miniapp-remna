@@ -19,6 +19,7 @@
     goDevices: Action;
     goHome: Action;
     goInvite: Action;
+    goSubscription: Action;
     goPartner: Action;
     partnerNavigationVisible?: boolean;
     partnerSettingsVisible?: boolean;
@@ -56,6 +57,7 @@
     goDevices,
     goHome,
     goInvite,
+    goSubscription,
     goPartner,
     partnerNavigationVisible = false,
     partnerSettingsVisible = false,
@@ -75,7 +77,7 @@
   style="position:relative;isolation:isolate"
 >
   <ThemeEffectSurface name="shell.background" />
-  {#if screen === "install" || screen === "invite" || screen === "partner" || screen === "devices" || screen === "support" || screen === "settings" || screen === "notifications" || screen === "payment-history" || screen === "security" || screen === "status"}
+  {#if screen === "install" || screen === "invite" || screen === "subscription" || screen === "partner" || screen === "devices" || screen === "support" || screen === "settings" || screen === "notifications" || screen === "payment-history" || screen === "security" || screen === "status"}
     <header class="app-header accent-title">
       <div class="brand-row">
         <BrandMark {brand} />
@@ -103,6 +105,7 @@
     onDevices={goDevices}
     onHome={goHome}
     onInvite={goInvite}
+    onSubscription={goSubscription}
     onPartner={goPartner}
     {bonusesNavigationVisible}
     {partnerNavigationVisible}

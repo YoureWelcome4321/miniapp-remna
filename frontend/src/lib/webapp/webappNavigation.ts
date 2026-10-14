@@ -42,6 +42,10 @@ export function createWebappNavigation({
     showSection("home");
   }
 
+  function goSubscription() {
+    showSection("subscription");
+  }
+
   function goInstall() {
     if (!canUseInstallGuides()) {
       openConnectLink();
@@ -114,6 +118,7 @@ export function createWebappNavigation({
     goInvite,
     goPartner,
     goSettings,
+    goSubscription,
     goNotifications,
     goPaymentHistory,
     goSecurity,
